@@ -48,6 +48,7 @@ dockerd \
 
 minikube start --vm-driver=none \
  --extra-config=apiserver.Admission.PluginNames=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,GenericAdmissionWebhook,ResourceQuota \
+ "$@" \
  &> /var/log/minikube-start.log 2>&1 < /dev/null
 
 kubectl config view --merge=true --flatten=true > /kubeconfig

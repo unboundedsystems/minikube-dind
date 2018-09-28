@@ -88,5 +88,5 @@ RUN chmod a+rx /usr/local/bin/minikube && \
     cp /usr/local/bin/localkube /root/.minikube/cache/localkube/localkube-v1.8.0 && \
     echo 546bd1980d0ea7424a21fc7ff3d7a8afd7809cefd362546d40f19a40d805f553 > /root/.minikube/cache/localkube/localkube-v1.8.0.sha256
 
-# If nothing else specified, start up docker and kubernetes.
-CMD [ "/bin/bash", "-c", "/start.sh" ]
+# Start up docker and then pass any "docker run" args to minikube start
+ENTRYPOINT [ "/start.sh" ]
