@@ -20,9 +20,6 @@
 
 FROM debian:jessie
 
-ENV MINIKUBE_VERSION=v0.24.1
-ENV KUBECTL_VERSION=v1.9.1
-
 # Install minikube dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
   DEBIAN_FRONTEND=noninteractive apt-get -yy -q --no-install-recommends install \
@@ -59,33 +56,37 @@ RUN \
     docker-ce \
   && DEBIAN_FRONTEND=noninteractive apt-get clean && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 VOLUME /var/lib/docker
 EXPOSE 2375
+EXPOSE 8443
 
-# Install minikube
-RUN curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64 && chmod +x minikube
-ENV MINIKUBE_WANTUPDATENOTIFICATION=false
-ENV MINIKUBE_WANTREPORTERRORPROMPT=false
-ENV CHANGE_MINIKUBE_NONE_USER=true
+ENV MINIKUBE_VERSION=v0.24.1 \
+    KUBECTL_VERSION=v1.9.1 \
+    MINIKUBE_WANTUPDATENOTIFICATION=false \
+    MINIKUBE_WANTREPORTERRORPROMPT=false \
+    CHANGE_MINIKUBE_NONE_USER=true
+
 # minikube --vm-driver=none checks systemctl before starting.  Instead of
 # setting up a real systemd environment, install this shim to tell minikube
 # what it wants to know: localkube isn't started yet.
 COPY fake-systemctl.sh /usr/local/bin/systemctl
-EXPOSE 8443
-
-# Install kubectl
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
-  chmod a+x kubectl && \
-  mv kubectl /usr/local/bin
-
-# Copy local start.sh
 COPY start.sh /start.sh
-RUN chmod a+x /start.sh
+
+# Install minikube and kubectl
+ADD https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64 /usr/local/bin/minikube
+ADD https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl /usr/local/bin/kubectl
 
 ADD https://storage.googleapis.com/minikube/k8sReleases/v1.8.0/localkube-linux-amd64 /usr/local/bin/localkube
-RUN mkdir -p /root/.minikube/cache/localkube && \
+
+RUN chmod a+rx /usr/local/bin/minikube && \
+    chmod a+rx /usr/local/bin/systemctl && \
+    chmod a+rx /usr/local/bin/kubectl && \
+    chmod a+rx /start.sh && \
+    chmod a+rx /usr/local/bin/localkube && \
+    mkdir -p /root/.minikube/cache/localkube && \
     cp /usr/local/bin/localkube /root/.minikube/cache/localkube/localkube-v1.8.0 && \
     echo 546bd1980d0ea7424a21fc7ff3d7a8afd7809cefd362546d40f19a40d805f553 > /root/.minikube/cache/localkube/localkube-v1.8.0.sha256
 
 # If nothing else specified, start up docker and kubernetes.
-CMD /start.sh & sleep 4 && tail -F /var/log/docker.log /var/log/dind.log /var/log/minikube-start.log
+CMD [ "/bin/bash", "-c", "/start.sh" ]

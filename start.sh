@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Portions Copyright 2016 The Kubernetes Authors All rights reserved.
 # Portions Copyright 2018 AspenMesh
 # Portions Copyright 2018 Unbounded Systems, LLC
@@ -18,7 +18,25 @@
 # Based on:
 # https://github.com/kubernetes/minikube/tree/master/deploy/docker/localkube-dind
 
+child=0
+sig_handler() {
+    sig_send=$1
+    code=$2
+    if [ $child -ne 0 ]; then
+        kill -$sig_send $child
+        wait $child
+    fi
+    exit $code
+}
+trap 'sig_handler HUP 129' HUP
+trap 'sig_handler TERM 130' INT
+trap 'sig_handler TERM 131' QUIT
+trap 'sig_handler TERM 143' TERM
+
 mount --make-shared /
+
+tail -F /var/log/docker.log /var/log/dind.log /var/log/minikube-start.log &
+child=$!
 
 export CNI_BRIDGE_NETWORK_OFFSET="0.0.1.0"
 /dindnet &> /var/log/dind.log 2>&1 < /dev/null &
@@ -28,10 +46,15 @@ dockerd \
   --host=tcp://0.0.0.0:2375 \
   &> /var/log/docker.log 2>&1 < /dev/null &
 
-/minikube start --vm-driver=none \
+
+minikube start --vm-driver=none \
  --extra-config=apiserver.Admission.PluginNames=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,GenericAdmissionWebhook,ResourceQuota \
  &> /var/log/minikube-start.log 2>&1 < /dev/null
 
 kubectl config view --merge=true --flatten=true > /kubeconfig
-touch /minikube_startup_complete
 
+touch /minikube_startup_complete
+echo Kubeconfig is ready
+
+# Put the tail of logs in the foreground to keep the container running
+wait $child
