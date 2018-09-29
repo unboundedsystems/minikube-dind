@@ -44,13 +44,15 @@ export CNI_BRIDGE_NETWORK_OFFSET="0.0.1.0"
 dockerd \
   --host=unix:///var/run/docker.sock \
   --host=tcp://0.0.0.0:2375 \
-  &> /var/log/docker.log 2>&1 < /dev/null &
+  > /var/log/docker.log 2>&1 < /dev/null &
 
+LOG_DIR=/var/log/minikube
+mkdir -p "${LOG_DIR}"
+START_ARGS="--vm-driver=none --kubernetes-version=${K8S_VERSION} --log_dir=${LOG_DIR} --loglevel=1 --extra-config=apiserver.Admission.PluginNames=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,GenericAdmissionWebhook,ResourceQuota"
 
-minikube start --vm-driver=none \
- --extra-config=apiserver.Admission.PluginNames=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,GenericAdmissionWebhook,ResourceQuota \
- "$@" \
- &> /var/log/minikube-start.log 2>&1 < /dev/null
+echo Starting minikube: minikube start ${START_ARGS} "$@"
+minikube start ${START_ARGS} "$@" >& /var/log/minikube-start.log \
+    || (printf "\n\n*** Minikube start failed ***\n\n"; sleep 2; false)
 
 kubectl config view --merge=true --flatten=true > /kubeconfig
 

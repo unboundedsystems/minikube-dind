@@ -62,6 +62,7 @@ EXPOSE 2375
 EXPOSE 8443
 
 ENV MINIKUBE_VERSION=v0.25.0 \
+    K8S_VERSION=v1.8.0 \
     KUBECTL_VERSION=v1.9.1 \
     MINIKUBE_WANTUPDATENOTIFICATION=false \
     MINIKUBE_WANTREPORTERRORPROMPT=false \
@@ -84,7 +85,7 @@ RUN chmod a+rx /usr/local/bin/minikube && \
     chmod a+rx /usr/local/bin/systemctl && \
     chmod a+rx /usr/local/bin/kubectl && \
     chmod a+rx /start.sh && \
-    minikube start --vm-driver=none && \
+    minikube start --vm-driver=none --kubernetes-version=${K8S_VERSION} && \
     (cd /root/.minikube && rm -rf $(ls | egrep -v '^cache'))
 
 # Start up docker and then pass any "docker run" args to minikube start
