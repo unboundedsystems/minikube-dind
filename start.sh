@@ -35,7 +35,8 @@ trap 'sig_handler TERM 143' TERM
 
 mount --make-shared /
 
-tail -F /var/log/docker.log /var/log/dind.log /var/log/minikube-start.log &
+echo > /var/lib/localkube/localkube.err
+tail -F /var/log/docker.log /var/log/minikube-start.log /var/lib/localkube/localkube.err &
 child=$!
 
 export CNI_BRIDGE_NETWORK_OFFSET="0.0.1.0"
