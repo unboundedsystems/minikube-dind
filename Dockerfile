@@ -61,7 +61,8 @@ VOLUME /var/lib/docker
 EXPOSE 2375
 EXPOSE 8443
 
-ENV MINIKUBE_VERSION=v0.24.1 \
+ENV MINIKUBE_VERSION=v0.25.0 \
+    K8S_VERSION=v1.8.0 \
     KUBECTL_VERSION=v1.9.1 \
     MINIKUBE_WANTUPDATENOTIFICATION=false \
     MINIKUBE_WANTREPORTERRORPROMPT=false \
@@ -77,16 +78,15 @@ COPY start.sh /start.sh
 ADD https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64 /usr/local/bin/minikube
 ADD https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl /usr/local/bin/kubectl
 
-ADD https://storage.googleapis.com/minikube/k8sReleases/v1.8.0/localkube-linux-amd64 /usr/local/bin/localkube
-
+# In order to save on minikube startup time, pre-load minikube's cache
+# with the images it would otherwise download on each startup. But then,
+# remove the rest of minikube's config so it re-generates certs and such.
 RUN chmod a+rx /usr/local/bin/minikube && \
     chmod a+rx /usr/local/bin/systemctl && \
     chmod a+rx /usr/local/bin/kubectl && \
     chmod a+rx /start.sh && \
-    chmod a+rx /usr/local/bin/localkube && \
-    mkdir -p /root/.minikube/cache/localkube && \
-    cp /usr/local/bin/localkube /root/.minikube/cache/localkube/localkube-v1.8.0 && \
-    echo 546bd1980d0ea7424a21fc7ff3d7a8afd7809cefd362546d40f19a40d805f553 > /root/.minikube/cache/localkube/localkube-v1.8.0.sha256
+    minikube start --vm-driver=none --kubernetes-version=${K8S_VERSION} && \
+    (cd /root/.minikube && rm -rf $(ls | egrep -v '^cache'))
 
-# If nothing else specified, start up docker and kubernetes.
-CMD [ "/bin/bash", "-c", "/start.sh" ]
+# Start up docker and then pass any "docker run" args to minikube start
+ENTRYPOINT [ "/start.sh" ]
