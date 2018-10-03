@@ -86,6 +86,9 @@ RUN chmod a+rx /usr/local/bin/minikube && \
     chmod a+rx /usr/local/bin/kubectl && \
     chmod a+rx /start.sh && \
     minikube start --vm-driver=none --kubernetes-version=${K8S_VERSION} && \
+    minikube stop && \
+    ls -lR /root/.minikube/cache && \
+    rm -rf /var/lib/localkube/{etcd,certs,kubeconfig} /tmp/* && \
     (cd /root/.minikube && rm -rf $(ls | egrep -v '^cache'))
 
 # Start up docker and then pass any "docker run" args to minikube start
